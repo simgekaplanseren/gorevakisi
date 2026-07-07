@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskFlow - Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app"></div>
+  <div id="toast" hidden></div>
+  <script src="app.js"></script>
+  <script>
+    const user = guard(true);
+    if (!user) throw new Error('Yetkisiz');
+
+    const projects = load(KEYS.projects);
+    const tasks = load(KEYS.tasks);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+
+    const stats = [
+      ['Toplam Proje', projects.length],
+      ['Toplam Görev', tasks.length],
+      ['Tamamlanan', tasks.filter(t => t.status === 'Completed').length],
+      ['Devam Eden', tasks.filter(t => t.status === 'InProgress').length],
+      ['Geciken', tasks.filter(t => t.dueDate && new Date(t.dueDate) < today && t.status !== 'Completed').length],
+      ['Bugün Teslim', tasks.filter(t => {
+        if (!t.dueDate || t.status === 'Completed') return false;
+        const d = new Date(t.dueDate); d.setHours(0,0,0,0);
+        return d.getTime() === today.getTime();
+      }).length],
+    ];
+
+    const recent = [...tasks].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
+    const pmap = Object.fromEntries(projects.map(p => [p.id, p.name]));
+
+    document.getElementById('app').innerHTML = shell('dashboard', `
+      <h1>Dashboard</h1>
+      <div class="grid-stats">${stats.map(([l,v]) => `<div class="box"><h3>${l}</h3><strong>${v}</strong></div>`).join('')}</div>
+      <h2>Son Görevler</h2>
+      <table>
+        <thead><tr><th>Başlık</th><th>Proje</th><th>Atanan</th><th>Durum</th><th>Teslim</th></tr></thead>
+        <tbody>
+          ${recent.length ? recent.map(t => `
+            <tr>
+              <td>${t.title}</td>
+              <td>${pmap[t.projectId] || '—'}</td>
+              <td>${userName(t.assigneeId)}</td>
+              <td><span class="tag ${badge(t.status)}">${statusLabel(t.status)}</span></td>
+              <td>${fmtDate(t.dueDate)}</td>
+            </tr>`).join('') : '<tr><td colspan="5">Görev yok</td></tr>'}
+        </tbody>
+      </table>
+    `);
+  </script>
+</body>
+</html>

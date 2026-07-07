@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskFlow - Görevler</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app"></div>
+  <div id="toast" hidden></div>
+
+  <dialog id="dlg" style="border:0;border-radius:14px;padding:20px;max-width:460px;width:92%">
+    <h2 id="dlgTitle" style="margin-bottom:12px">Yeni Görev</h2>
+    <input type="hidden" id="editId">
+    <div class="field"><label>Başlık</label><input id="tTitle"></div>
+    <div class="field"><label>Öncelik</label><select id="tPriority"></select></div>
+    <div class="field" id="statusBox" hidden><label>Durum</label><select id="tStatus"></select></div>
+    <div class="field"><label>Teslim</label><input type="date" id="tDue"></div>
+    <div class="field" id="assignBox" hidden><label>Atanan</label><select id="tAssign"></select></div>
+    <div class="actions">
+      <button class="btn btn-light" onclick="dlg.close()">İptal</button>
+      <button class="btn btn-main" style="width:auto" onclick="saveTask()">Kaydet</button>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+  <script>
+    const user = guard();
+    const pid = new URLSearchParams(location.search).get('p');
+    const project = load(KEYS.projects).find(p => p.id === pid);
+    if (!project) location.href = 'projects.html';
+
+    const dlg = document.getElementById('dlg');
+    document.getElementById('tPriority').innerHTML = PRIORITIES.map(p => `<option value="${p.id}">${p.label}</option>`).join('');
+    document.getElementById('tStatus').innerHTML = STATUSES.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
+
+    if (user.role === 'Admin') {
+      document.getElementById('statusBox').hidden = false;
+      document.getElementById('assignBox').hidden = false;
+      document.getElementById('tAssign').innerHTML = '<option value="">—</option>' +
+        load(KEYS.users).map(u => `<option value="${u.id}">${u.name} ${u.surname}</option>`).join('');
+    }
+
+    function filtered() {
+      let list = tasksFor(user, pid);
+      const q = document.getElementById('q')?.value.toLowerCase() || '';
+      const st = document.getElementById('st')?.value || '';
+      const pr = document.getElementById('pr')?.value || '';
+      if (q) list = list.filter(t => t.title.toLowerCase().includes(q));
+      if (st) list = list.filter(t => t.status === st);
+      if (pr) list = list.filter(t => t.priority === pr);
+      return list;
+    }
+
+    function render() {
+      const list = filtered();
+      document.getElementById('app').innerHTML = shell('projects', `
+        <div class="row">
+          <div>
+            <a href="projects.html">← Projeler</a>
+            <h1 style="margin-top:6px">${project.name}</h1>
+          </div>
+          <div class="actions">
+            <a class="btn btn-light" href="kanban.html?p=${pid}">Kanban</a>
+            ${user.role === 'Admin' ? '<button class="btn btn-main" style="width:auto" onclick="openNew()">+ Görev</button>' : ''}
+          </div>
+        </div>
+        <div class="filters">
+          <input id="q" placeholder="Ara..." oninput="render()">
+          <select id="st" onchange="render()"><option value="">Durum</option>${STATUSES.map(s=>`<option value="${s.id}">${s.label}</option>`).join('')}</select>
+          <select id="pr" onchange="render()"><option value="">Öncelik</option>${PRIORITIES.map(p=>`<option value="${p.id}">${p.label}</option>`).join('')}</select>
+        </div>
+        <table>
+          <thead><tr><th>Başlık</th><th>Atanan</th><th>Öncelik</th><th>Durum</th><th>Teslim</th><th></th></tr></thead>
+          <tbody>
+            ${list.length ? list.map(t => `
+              <tr>
+                <td>${t.title}</td>
+                <td>${userName(t.assigneeId)}</td>
+                <td><span class="tag ${pbadge(t.priority)}">${priorityLabel(t.priority)}</span></td>
+                <td><span class="tag ${badge(t.status)}">${statusLabel(t.status)}</span></td>
+                <td>${fmtDate(t.dueDate)}</td>
+                <td>
+                  ${user.role === 'Admin'
+                    ? `<button class="btn btn-light" onclick="openEdit('${t.id}')">Düzenle</button>
+                       <button class="btn btn-danger" onclick="delTask('${t.id}')">Sil</button>`
+                    : `<select onchange="setStatus('${t.id}', this.value)">${STATUSES.map(s=>`<option value="${s.id}" ${t.status===s.id?'selected':''}>${s.label}</option>`).join('')}</select>`}
+                </td>
+              </tr>`).join('') : '<tr><td colspan="6">Görev yok</td></tr>'}
+          </tbody>
+        </table>
+      `);
+      const q = document.getElementById('q'); if (q) q.focus();
+    }
+
+    function openNew() {
+      document.getElementById('editId').value = '';
+      document.getElementById('dlgTitle').textContent = 'Yeni Görev';
+      document.getElementById('tTitle').value = '';
+      document.getElementById('tDue').value = '';
+      dlg.showModal();
+    }
+
+    function openEdit(tid) {
+      const t = load(KEYS.tasks).find(x => x.id === tid);
+      document.getElementById('editId').value = tid;
+      document.getElementById('dlgTitle').textContent = 'Görev Düzenle';
+      document.getElementById('tTitle').value = t.title;
+      document.getElementById('tPriority').value = t.priority;
+      document.getElementById('tStatus').value = t.status;
+      document.getElementById('tDue').value = t.dueDate || '';
+      document.getElementById('tAssign').value = t.assigneeId || '';
+      dlg.showModal();
+    }
+
+    function saveTask() {
+      const title = document.getElementById('tTitle').value.trim();
+      if (!title) return toast('Başlık gerekli', false);
+      const tasks = load(KEYS.tasks);
+      const editId = document.getElementById('editId').value;
+      const payload = {
+        title,
+        priority: document.getElementById('tPriority').value,
+        dueDate: document.getElementById('tDue').value || null,
+        projectId: pid,
+        assigneeId: user.role === 'Admin' ? (document.getElementById('tAssign').value || null) : user.id,
+        status: user.role === 'Admin' ? document.getElementById('tStatus').value : 'ToDo',
+      };
+      if (editId) {
+        const i = tasks.findIndex(t => t.id === editId);
+        tasks[i] = { ...tasks[i], ...payload };
+      } else {
+        tasks.push({ id: id(), ...payload, createdAt: new Date().toISOString() });
+      }
+      save(KEYS.tasks, tasks);
+      dlg.close();
+      render();
+      toast('Kaydedildi', true);
+    }
+
+    function delTask(tid) {
+      if (!confirm('Silinsin mi?')) return;
+      save(KEYS.tasks, load(KEYS.tasks).filter(t => t.id !== tid));
+      render();
+    }
+
+    function setStatus(tid, status) {
+      const tasks = load(KEYS.tasks);
+      const t = tasks.find(x => x.id === tid);
+      if (t) { t.status = status; save(KEYS.tasks, tasks); render(); }
+    }
+
+    render();
+  </script>
+</body>
+</html>

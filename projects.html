@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskFlow - Projeler</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app"></div>
+  <div id="toast" hidden></div>
+
+  <dialog id="dlg" style="border:0;border-radius:14px;padding:20px;max-width:420px;width:92%">
+    <h2 style="margin-bottom:12px">Yeni Proje</h2>
+    <div class="field"><label>Ad</label><input id="pName"></div>
+    <div class="field"><label>Açıklama</label><textarea id="pDesc" rows="3"></textarea></div>
+    <div class="actions">
+      <button class="btn btn-light" onclick="dlg.close()">İptal</button>
+      <button class="btn btn-main" style="width:auto" onclick="addProject()">Kaydet</button>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+  <script>
+    const user = guard();
+    const dlg = document.getElementById('dlg');
+
+    function render() {
+      const q = (document.getElementById('search')?.value || '').toLowerCase();
+      const list = projectsFor(user).filter(p =>
+        !q || p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q)
+      );
+
+      document.getElementById('app').innerHTML = shell('projects', `
+        <div class="row">
+          <h1 style="margin:0">Projeler</h1>
+          <div class="filters">
+            <input id="search" placeholder="Ara..." value="${q.replace(/"/g, '&quot;')}" oninput="render()">
+            ${user.role === 'Admin' ? '<button class="btn btn-main" style="width:auto" onclick="dlg.showModal()">+ Proje</button>' : ''}
+          </div>
+        </div>
+        <div class="grid">
+          ${list.length ? list.map(p => {
+            const s = projectStats(p.id);
+            return `
+              <div class="box project">
+                <h3>${p.name}</h3>
+                <p>${p.description || ''}</p>
+                <div class="bar"><i style="width:${s.percent}%"></i></div>
+                <small>${s.done}/${s.total} görev · %${s.percent}</small>
+                <div class="actions">
+                  <a class="btn btn-light" href="tasks.html?p=${p.id}">Görevler</a>
+                  <a class="btn btn-light" href="kanban.html?p=${p.id}">Kanban</a>
+                  ${user.role === 'Admin' ? `<button class="btn btn-danger" onclick="delProject('${p.id}')">Sil</button>` : ''}
+                </div>
+              </div>`;
+          }).join('') : '<p>Proje bulunamadı.</p>'}
+        </div>
+      `);
+    }
+
+    function addProject() {
+      const name = document.getElementById('pName').value.trim();
+      if (!name) return toast('Proje adı gerekli', false);
+      const projects = load(KEYS.projects);
+      projects.push({ id: id(), name, description: document.getElementById('pDesc').value, ownerId: user.id, members: [], updatedAt: new Date().toISOString() });
+      save(KEYS.projects, projects);
+      dlg.close();
+      render();
+      toast('Proje eklendi', true);
+    }
+
+    function delProject(pid) {
+      if (!confirm('Proje silinsin mi?')) return;
+      save(KEYS.projects, load(KEYS.projects).filter(p => p.id !== pid));
+      save(KEYS.tasks, load(KEYS.tasks).filter(t => t.projectId !== pid));
+      render();
+    }
+
+    render();
+  </script>
+</body>
+</html>

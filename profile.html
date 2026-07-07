@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskFlow - Profil</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app"></div>
+  <div id="toast" hidden></div>
+  <script src="app.js"></script>
+  <script>
+    const user = guard();
+    const myTasks = tasksFor(user);
+
+    document.getElementById('app').innerHTML = shell('profile', `
+      <h1>Profil</h1>
+      <div class="box" style="margin-bottom:16px">
+        <div class="profile-top">
+          <div class="avatar">${(user.name[0]+user.surname[0]).toUpperCase()}</div>
+          <div>
+            <h2>${user.name} ${user.surname}</h2>
+            <p style="color:#64748b">${user.email}</p>
+            <p style="color:#64748b;font-size:14px">${myTasks.length} görev · ${myTasks.filter(t=>t.status==='Completed').length} tamamlanan</p>
+          </div>
+        </div>
+        <div class="field"><label>Ad</label><input id="name" value="${user.name}"></div>
+        <div class="field"><label>Soyad</label><input id="surname" value="${user.surname}"></div>
+        <button class="btn btn-main" style="width:auto" onclick="saveProfile()">Kaydet</button>
+      </div>
+      <div class="box">
+        <h2>Şifre Değiştir</h2>
+        <div class="field"><label>Mevcut şifre</label><input type="password" id="old"></div>
+        <div class="field"><label>Yeni şifre</label><input type="password" id="new"></div>
+        <button class="btn btn-main" style="width:auto" onclick="changePass()">Güncelle</button>
+      </div>
+    `);
+
+    function saveProfile() {
+      const users = load(KEYS.users);
+      const u = users.find(x => x.id === user.id);
+      u.name = document.getElementById('name').value;
+      u.surname = document.getElementById('surname').value;
+      save(KEYS.users, users);
+      localStorage.setItem(KEYS.session, JSON.stringify(u));
+      toast('Profil güncellendi', true);
+      setTimeout(() => location.reload(), 500);
+    }
+
+    function changePass() {
+      const old = document.getElementById('old').value;
+      const neu = document.getElementById('new').value;
+      if (old !== user.password) return toast('Mevcut şifre hatalı', false);
+      if (neu.length < 6) return toast('Yeni şifre en az 6 karakter', false);
+      const users = load(KEYS.users);
+      const u = users.find(x => x.id === user.id);
+      u.password = neu;
+      save(KEYS.users, users);
+      localStorage.setItem(KEYS.session, JSON.stringify(u));
+      toast('Şifre değiştirildi', true);
+    }
+  </script>
+</body>
+</html>

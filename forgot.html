@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskFlow - Şifremi Unuttum</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="auth">
+    <div class="card">
+      <div class="logo"><h1>Şifremi Unuttum</h1><p>Demo ekranı</p></div>
+      <form onsubmit="event.preventDefault(); document.getElementById('ok').hidden=false;">
+        <div class="field"><label>E-posta</label><input type="email" required></div>
+        <button class="btn btn-main" type="submit">Gönder</button>
+      </form>
+      <div id="ok" class="msg ok" hidden style="margin-top:12px">Bağlantı gönderildi (demo).</div>
+      <p class="center"><a href="index.html">Giriş sayfasına dön</a></p>
+    </div>
+  </div>
+</body>
+</html>
