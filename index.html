@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TaskFlow - Giriş</title>
+  <title>Görev Akışı - Giriş</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="auth">
     <div class="card">
       <div class="logo">
-        <h1>TaskFlow</h1>
+        <h1>Görev Akışı</h1>
         <p>Görev Yönetim Sistemi</p>
       </div>
 
@@ -30,11 +30,11 @@
 
       <p class="center"><a href="register.html">Kayıt ol</a> · <a href="forgot.html">Şifremi unuttum</a></p>
 
-      <div class="hint">
-        <strong>Nasıl açılır?</strong><br>
-        Bu dosyaya (<code>index.html</code>) çift tıkla — İPSİA HOME gibi.<br><br>
-        Admin: admin@taskflow.com / Admin123!<br>
-        Kullanıcı: user@taskflow.com / User123!
+      <div class="demo-box">
+        <strong>Demo hesaplar</strong>
+        <p><b>Sistem Admin:</b> admin@taskflow.com / Admin123!</p>
+        <p><b>Ekip Üyesi:</b> user@taskflow.com / User123!</p>
+        <p style="margin-top:8px"><b>Kendi lider hesabın:</b> <a href="register.html">Kayıt ol</a> → Lider Paneli açılır</p>
       </div>
     </div>
   </div>
@@ -42,13 +42,13 @@
   <script src="app.js"></script>
   <script>
     const user = me();
-    if (user) location.href = user.role === 'Admin' ? 'dashboard.html' : 'projects.html';
+    if (user) location.href = user.role === 'Admin' ? 'dashboard.html' : 'leader.html';
 
     document.getElementById('form').addEventListener('submit', (e) => {
       e.preventDefault();
       try {
         const u = login(document.getElementById('email').value, document.getElementById('password').value);
-        location.href = u.role === 'Admin' ? 'dashboard.html' : 'projects.html';
+        location.href = u.role === 'Admin' ? 'dashboard.html' : 'leader.html';
       } catch (err) {
         document.getElementById('msg').innerHTML = `<div class="msg err">${err.message}</div>`;
       }

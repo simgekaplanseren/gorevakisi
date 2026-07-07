@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Görev Akışı - Kullanıcılar</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app"></div>
+  <div id="toast" hidden></div>
+
+  <dialog id="dlg" style="border:0;border-radius:14px;padding:20px;max-width:440px;width:92%">
+    <h2 style="margin-bottom:12px">Yeni Ekip Üyesi</h2>
+    <p class="text-muted" style="margin-bottom:12px">Arkadaşının e-posta ve şifresini gir. Sonra projeye ekleyebilirsin.</p>
+    <div class="field"><label>Ad</label><input id="name"></div>
+    <div class="field"><label>Soyad</label><input id="surname"></div>
+    <div class="field"><label>E-posta</label><input type="email" id="email" placeholder="ornek@mail.com"></div>
+    <div class="field"><label>Şifre</label><input type="password" id="password" placeholder="En az 6 karakter"></div>
+    <div class="actions">
+      <button class="btn btn-light" onclick="dlg.close()">İptal</button>
+      <button class="btn btn-main" style="width:auto" onclick="addUser()">Kaydet</button>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+  <script>
+    const user = guard(true);
+    const dlg = document.getElementById('dlg');
+
+    function userProjectsLabel(uid) {
+      const list = projectsForUserId(uid);
+      return list.length ? list.map((p) => p.name).join(', ') : '—';
+    }
+
+    function render() {
+      const users = load(KEYS.users);
+      document.getElementById('app').innerHTML = shell('users', `
+        <div class="row">
+          <h1 style="margin:0">Ekip — Kullanıcılar</h1>
+          <button class="btn btn-main" style="width:auto" onclick="dlg.showModal()">+ Kullanıcı Oluştur</button>
+        </div>
+
+        <div class="guide">
+          <h2>Kim ne yapar?</h2>
+          <ul class="role-list">
+            <li><span class="tag b-review">Admin (Sen)</span> Proje açar, ekip hesabı oluşturur, görev atar, her şeyi görür.</li>
+            <li><span class="tag b-med">Ekip Üyesi</span> Sadece kendine atanan görevleri görür, durumu günceller, yorum yazar.</li>
+          </ul>
+          <p style="margin-top:10px;font-size:14px;color:#475569">
+            <strong>Adım 1:</strong> Buradan ekip arkadaşının hesabını oluştur →
+            <strong>Adım 2:</strong> <a href="projects.html">Projeler</a> → Proje Detayı → + Üye Ekle
+          </p>
+        </div>
+
+        <table>
+          <thead><tr><th>Ad Soyad</th><th>E-posta</th><th>Rol</th><th>Projeler</th><th></th></tr></thead>
+          <tbody>
+            ${users.map((u) => `
+              <tr>
+                <td><strong>${u.name} ${u.surname}</strong></td>
+                <td>${u.email}</td>
+                <td><span class="tag ${u.role === 'Admin' ? 'b-review' : 'b-med'}">${u.role === 'Admin' ? 'Proje Lideri' : 'Ekip Üyesi'}</span></td>
+                <td>${userProjectsLabel(u.id)}</td>
+                <td>
+                  ${u.id !== user.id ? `<button class="btn btn-danger" onclick="removeUser('${u.id}')">Sil</button>` : '—'}
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      `);
+    }
+
+    function addUser() {
+      const name = document.getElementById('name').value.trim();
+      const surname = document.getElementById('surname').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      if (!name || !surname || !email || !password) return toast('Tüm alanları doldur', false);
+      if (password.length < 6) return toast('Şifre en az 6 karakter', false);
+
+      const users = load(KEYS.users);
+      if (users.some((u) => u.email === email.toLowerCase())) return toast('E-posta kayıtlı', false);
+      users.push({ id: id(), name, surname, email: email.toLowerCase(), password, role: 'User' });
+      save(KEYS.users, users);
+      dlg.close();
+      render();
+      toast('Kullanıcı oluşturuldu — şimdi projeye ekle', true);
+    }
+
+    function removeUser(uid) {
+      if (!confirm('Kullanıcı silinsin mi? Projelerden de çıkarılır.')) return;
+      save(KEYS.users, load(KEYS.users).filter((u) => u.id !== uid));
+      const projects = load(KEYS.projects).map((p) => ({
+        ...p,
+        members: (p.members || []).filter((id) => id !== uid),
+      }));
+      save(KEYS.projects, projects);
+      const tasks = load(KEYS.tasks).map((t) => (t.assigneeId === uid ? { ...t, assigneeId: null } : t));
+      save(KEYS.tasks, tasks);
+      render();
+      toast('Kullanıcı silindi', true);
+    }
+
+    render();
+  </script>
+</body>
+</html>

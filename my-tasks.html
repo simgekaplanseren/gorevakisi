@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Görev Akışı - Görevlerim</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app"></div>
+  <div id="toast" hidden></div>
+  <script src="app.js"></script>
+  <script>
+    const user = guard();
+    const allTasks = user.role === 'Admin' ? load(KEYS.tasks) : tasksFor(user);
+    const projects = Object.fromEntries(load(KEYS.projects).map(p => [p.id, p.name]));
+
+    function render() {
+      const q = (document.getElementById('q')?.value || '').toLowerCase();
+      const st = document.getElementById('st')?.value || '';
+      let list = [...allTasks];
+      if (q) list = list.filter(t => (t.title + (t.description || '')).toLowerCase().includes(q));
+      if (st) list = list.filter(t => t.status === st);
+
+      const open = list.filter(t => t.status !== 'Completed').length;
+      const done = list.filter(t => t.status === 'Completed').length;
+      const myProjects = projectsFor(user);
+
+      const emptyHint = !myProjects.length ? `
+        <div class="guide warn">
+          <h2>Henüz görevin yok</h2>
+          <p><a href="leader.html">Lider Paneli</a>'nde proje oluşturup görev atayabilir — veya bir lider seni ekleyene kadar bekleyebilirsin.</p>
+        </div>` : '';
+
+      document.getElementById('app').innerHTML = shell('mytasks', `
+        <h1>Görevlerim</h1>
+        ${emptyHint}
+        <div class="grid-stats" style="margin-bottom:20px">
+          <div class="box"><h3>Açık Görev</h3><strong>${open}</strong></div>
+          <div class="box"><h3>Tamamlanan</h3><strong>${done}</strong></div>
+          <div class="box"><h3>Toplam</h3><strong>${list.length}</strong></div>
+        </div>
+        <div class="filters">
+          <input id="q" placeholder="Görev ara..." oninput="render()">
+          <select id="st" onchange="render()">
+            <option value="">Tüm durumlar</option>
+            ${STATUSES.map(s => `<option value="${s.id}">${s.label}</option>`).join('')}
+          </select>
+        </div>
+        <table>
+          <thead><tr><th>Görev</th><th>Proje</th><th>Durum</th><th>Öncelik</th><th>Teslim</th><th></th></tr></thead>
+          <tbody>
+            ${list.length ? list.map(t => `
+              <tr>
+                <td>
+                  <strong>${t.title}</strong>
+                  ${t.description ? `<div class="task-desc">${t.description}</div>` : ''}
+                </td>
+                <td>${projects[t.projectId] || '—'}</td>
+                <td><span class="tag ${badge(t.status)}">${statusLabel(t.status)}</span></td>
+                <td><span class="tag ${pbadge(t.priority)}">${priorityLabel(t.priority)}</span></td>
+                <td class="${dueClass(t)}">${fmtDate(t.dueDate)}</td>
+                <td><a class="btn btn-light" href="tasks.html?p=${t.projectId}">Aç</a></td>
+              </tr>`).join('') : '<tr><td colspan="6">Görev bulunamadı</td></tr>'}
+          </tbody>
+        </table>
+      `);
+    }
+
+    render();
+  </script>
+</body>
+</html>

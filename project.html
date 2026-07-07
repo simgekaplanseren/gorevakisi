@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Görev Akışı - Proje Detayı</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app"></div>
+  <div id="toast" hidden></div>
+
+  <dialog id="editDlg" style="border:0;border-radius:14px;padding:20px;max-width:420px;width:92%">
+    <h2 style="margin-bottom:12px">Projeyi Düzenle</h2>
+    <div class="field"><label>Ad</label><input id="pName"></div>
+    <div class="field"><label>Açıklama</label><textarea id="pDesc" rows="3"></textarea></div>
+    <div class="actions">
+      <button class="btn btn-light" onclick="editDlg.close()">İptal</button>
+      <button class="btn btn-main" style="width:auto" onclick="saveProject()">Kaydet</button>
+    </div>
+  </dialog>
+
+  <dialog id="memberDlg" style="border:0;border-radius:14px;padding:20px;max-width:420px;width:92%">
+    <h2 style="margin-bottom:12px">Ekip Üyesi Ekle</h2>
+    <p class="text-muted" style="margin-bottom:12px">Önce <a href="leader.html">Lider Paneli</a>'nden ekip hesabı oluştur.</p>
+    <div class="field"><label>Kullanıcı</label><select id="memberUser"></select></div>
+    <div class="actions">
+      <button class="btn btn-light" onclick="memberDlg.close()">İptal</button>
+      <button class="btn btn-main" style="width:auto" onclick="saveMember()">Ekle</button>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+  <script>
+    const user = guard();
+    const pid = new URLSearchParams(location.search).get('id');
+    let project = load(KEYS.projects).find((p) => p.id === pid);
+    if (!project || !projectsFor(user).some((p) => p.id === pid)) location.href = 'projects.html';
+
+    const editDlg = document.getElementById('editDlg');
+    const memberDlg = document.getElementById('memberDlg');
+    const manage = canManageProject(user, project);
+
+    function render() {
+      project = load(KEYS.projects).find((p) => p.id === pid);
+      const stats = projectStats(pid);
+      const team = projectTeam(project);
+      const available = usersNotInProject(project);
+
+      document.getElementById('app').innerHTML = shell('projects', `
+        <a href="projects.html">← Tüm Projeler</a>
+        <div class="row" style="margin-top:8px">
+          <div>
+            <h1 style="margin:0">${project.name}</h1>
+            <p class="text-muted" style="margin-top:6px">${project.description || 'Açıklama yok'}</p>
+          </div>
+          ${manage ? `<button class="btn btn-light" onclick="openEdit()">Düzenle</button>` : ''}
+        </div>
+
+        <div class="grid-stats" style="margin-bottom:20px">
+          <div class="box"><h3>Toplam Görev</h3><strong>${stats.total}</strong></div>
+          <div class="box"><h3>Tamamlanan</h3><strong>${stats.done}</strong></div>
+          <div class="box"><h3>İlerleme</h3><strong>%${stats.percent}</strong></div>
+          <div class="box"><h3>Ekip</h3><strong>${team.length}</strong></div>
+        </div>
+
+        <div class="actions" style="margin-bottom:24px">
+          <a class="btn btn-main" style="width:auto" href="tasks.html?p=${pid}">Görevler</a>
+          <a class="btn btn-light" href="kanban.html?p=${pid}">Kanban</a>
+          ${manage ? `<a class="btn btn-light" href="tasks.html?p=${pid}&new=1">+ Görev Oluştur</a>` : ''}
+        </div>
+
+        <div class="team-box">
+          <div class="row">
+            <h2 style="margin:0">Ekip (${team.length} kişi)</h2>
+            ${manage && available.length ? `<button class="btn btn-main" style="width:auto" onclick="openMember()">+ Üye Ekle</button>` : ''}
+          </div>
+          <p class="text-muted" style="margin:8px 0 14px">
+            ${manage
+              ? 'Proje lideri olarak ekibe kişi ekleyip görev atarsın. Üyeler sadece kendilerine atanan görevleri görür.'
+              : 'Bu projenin ekip üyelerisin. Sana atanan görevleri Görevler sayfasından takip edebilirsin.'}
+          </p>
+          <table>
+            <thead><tr><th>Kişi</th><th>E-posta</th><th>Rol</th>${manage ? '<th></th>' : ''}</tr></thead>
+            <tbody>
+              ${team.map((u) => {
+                const isOwner = u.id === project.ownerId;
+                return `<tr>
+                  <td><strong>${u.name} ${u.surname}</strong></td>
+                  <td>${u.email}</td>
+                  <td><span class="tag ${isOwner ? 'b-review' : 'b-med'}">${isOwner ? 'Proje Lideri' : 'Ekip Üyesi'}</span></td>
+                  ${manage ? `<td>${!isOwner ? `<button class="btn btn-danger" onclick="removeMember('${u.id}')">Çıkar</button>` : '—'}</td>` : ''}
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+          ${manage && !available.length && team.length <= 1 ? `
+            <div class="empty-hint" style="margin-top:14px">
+              Henüz ekip üyesi yok. <a href="leader.html">Lider Paneli</a>'nden hesap oluştur, sonra buradan ekle.
+            </div>` : ''}
+        </div>
+      `);
+    }
+
+    function openEdit() {
+      document.getElementById('pName').value = project.name;
+      document.getElementById('pDesc').value = project.description || '';
+      editDlg.showModal();
+    }
+
+    function saveProject() {
+      const name = document.getElementById('pName').value.trim();
+      if (!name) return toast('Proje adı gerekli', false);
+      const projects = load(KEYS.projects);
+      const p = projects.find((x) => x.id === pid);
+      p.name = name;
+      p.description = document.getElementById('pDesc').value.trim();
+      p.updatedAt = new Date().toISOString();
+      save(KEYS.projects, projects);
+      editDlg.close();
+      render();
+      toast('Proje güncellendi', true);
+    }
+
+    function openMember() {
+      const available = usersNotInProject(project);
+      if (!available.length) return toast('Eklenecek kullanıcı yok. Önce Kullanıcılar sayfasından oluştur.', false);
+      document.getElementById('memberUser').innerHTML = available.map((u) =>
+        `<option value="${u.id}">${u.name} ${u.surname} (${u.email})</option>`
+      ).join('');
+      memberDlg.showModal();
+    }
+
+    function saveMember() {
+      const userId = document.getElementById('memberUser').value;
+      const projects = load(KEYS.projects);
+      const p = projects.find((x) => x.id === pid);
+      if (!p.members) p.members = [];
+      if (!p.members.includes(userId)) p.members.push(userId);
+      save(KEYS.projects, projects);
+      memberDlg.close();
+      render();
+      toast('Ekip üyesi eklendi', true);
+    }
+
+    function removeMember(userId) {
+      if (!confirm('Bu kişi projeden çıkarılsın mı? Atanan görevleri kalır.')) return;
+      const projects = load(KEYS.projects);
+      const p = projects.find((x) => x.id === pid);
+      p.members = (p.members || []).filter((id) => id !== userId);
+      save(KEYS.projects, projects);
+      render();
+      toast('Üye çıkarıldı', true);
+    }
+
+    render();
+  </script>
+</body>
+</html>

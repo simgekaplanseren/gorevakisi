@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TaskFlow - Kanban</title>
+  <title>Görev Akışı - Kanban</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,7 +13,7 @@
     const user = guard();
     const pid = new URLSearchParams(location.search).get('p');
     const project = load(KEYS.projects).find(p => p.id === pid);
-    if (!project) location.href = 'projects.html';
+    if (!project || !projectsFor(user).some(p => p.id === pid)) location.href = 'projects.html';
 
     let dragId = null;
 
@@ -22,8 +22,8 @@
       document.getElementById('app').innerHTML = shell('projects', `
         <div class="row">
           <div>
-            <a href="projects.html">← Projeler</a>
-            <h1 style="margin-top:6px">${project.name} · Kanban</h1>
+            <a href="project.html?id=${pid}">← ${project.name}</a>
+            <h1 style="margin-top:6px">Kanban</h1>
           </div>
           <a class="btn btn-light" href="tasks.html?p=${pid}">Görev Listesi</a>
         </div>
@@ -40,6 +40,7 @@
             ${items.map(t => `
               <div class="task-card" draggable="true" data-id="${t.id}">
                 <h5>${t.title}</h5>
+                ${t.description ? `<div class="task-desc">${t.description}</div>` : ''}
                 <small>${userName(t.assigneeId)} · ${fmtDate(t.dueDate)}</small><br>
                 <span class="tag ${pbadge(t.priority)}">${priorityLabel(t.priority)}</span>
               </div>`).join('')}

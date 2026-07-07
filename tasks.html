@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TaskFlow - Görevler</title>
+  <title>Görev Akışı - Görevler</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,6 +14,7 @@
     <h2 id="dlgTitle" style="margin-bottom:12px">Yeni Görev</h2>
     <input type="hidden" id="editId">
     <div class="field"><label>Başlık</label><input id="tTitle"></div>
+    <div class="field"><label>Açıklama</label><textarea id="tDesc" rows="2" placeholder="Görev detayı..."></textarea></div>
     <div class="field"><label>Öncelik</label><select id="tPriority"></select></div>
     <div class="field" id="statusBox" hidden><label>Durum</label><select id="tStatus"></select></div>
     <div class="field"><label>Teslim</label><input type="date" id="tDue"></div>
@@ -24,22 +25,40 @@
     </div>
   </dialog>
 
+  <dialog id="commentDlg" style="border:0;border-radius:14px;padding:20px;max-width:480px;width:92%">
+    <h2 id="commentTitle" style="margin-bottom:12px">Yorumlar</h2>
+    <div id="commentList"></div>
+    <div class="field" style="margin-top:12px">
+      <label>Yeni yorum</label>
+      <textarea id="commentText" rows="2" placeholder="Not veya soru yaz..."></textarea>
+    </div>
+    <div class="actions">
+      <button class="btn btn-light" onclick="commentDlg.close()">Kapat</button>
+      <button class="btn btn-main" style="width:auto" onclick="postComment()">Gönder</button>
+    </div>
+  </dialog>
+
   <script src="app.js"></script>
   <script>
     const user = guard();
     const pid = new URLSearchParams(location.search).get('p');
     const project = load(KEYS.projects).find(p => p.id === pid);
-    if (!project) location.href = 'projects.html';
+    if (!project || !projectsFor(user).some(p => p.id === pid)) location.href = 'projects.html';
+
+    const manage = canManageProject(user, project);
+    const team = projectTeam(project);
 
     const dlg = document.getElementById('dlg');
+    const commentDlg = document.getElementById('commentDlg');
+    let activeCommentTask = null;
     document.getElementById('tPriority').innerHTML = PRIORITIES.map(p => `<option value="${p.id}">${p.label}</option>`).join('');
     document.getElementById('tStatus').innerHTML = STATUSES.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
 
-    if (user.role === 'Admin') {
+    if (manage) {
       document.getElementById('statusBox').hidden = false;
       document.getElementById('assignBox').hidden = false;
-      document.getElementById('tAssign').innerHTML = '<option value="">—</option>' +
-        load(KEYS.users).map(u => `<option value="${u.id}">${u.name} ${u.surname}</option>`).join('');
+      document.getElementById('tAssign').innerHTML = '<option value="">— Atanmadı —</option>' +
+        team.map(u => `<option value="${u.id}">${u.name} ${u.surname}</option>`).join('');
     }
 
     function filtered() {
@@ -47,7 +66,7 @@
       const q = document.getElementById('q')?.value.toLowerCase() || '';
       const st = document.getElementById('st')?.value || '';
       const pr = document.getElementById('pr')?.value || '';
-      if (q) list = list.filter(t => t.title.toLowerCase().includes(q));
+      if (q) list = list.filter(t => (t.title + (t.description || '')).toLowerCase().includes(q));
       if (st) list = list.filter(t => t.status === st);
       if (pr) list = list.filter(t => t.priority === pr);
       return list;
@@ -58,12 +77,13 @@
       document.getElementById('app').innerHTML = shell('projects', `
         <div class="row">
           <div>
-            <a href="projects.html">← Projeler</a>
-            <h1 style="margin-top:6px">${project.name}</h1>
+            <a href="project.html?id=${pid}">← ${project.name}</a>
+            <h1 style="margin-top:6px">Görevler</h1>
+            <p class="text-muted">Ekip: ${team.map(u => u.name).join(', ')}</p>
           </div>
           <div class="actions">
             <a class="btn btn-light" href="kanban.html?p=${pid}">Kanban</a>
-            ${user.role === 'Admin' ? '<button class="btn btn-main" style="width:auto" onclick="openNew()">+ Görev</button>' : ''}
+            ${manage ? '<button class="btn btn-main" style="width:auto" onclick="openNew()">+ Görev</button>' : ''}
           </div>
         </div>
         <div class="filters">
@@ -76,13 +96,17 @@
           <tbody>
             ${list.length ? list.map(t => `
               <tr>
-                <td>${t.title}</td>
+                <td>
+                  <strong>${t.title}</strong>
+                  ${t.description ? `<div class="task-desc">${t.description}</div>` : ''}
+                </td>
                 <td>${userName(t.assigneeId)}</td>
                 <td><span class="tag ${pbadge(t.priority)}">${priorityLabel(t.priority)}</span></td>
                 <td><span class="tag ${badge(t.status)}">${statusLabel(t.status)}</span></td>
-                <td>${fmtDate(t.dueDate)}</td>
+                <td class="${dueClass(t)}">${fmtDate(t.dueDate)}</td>
                 <td>
-                  ${user.role === 'Admin'
+                  <button class="btn btn-light" onclick="openComments('${t.id}','${t.title.replace(/'/g, "\\'")}')">Yorum</button>
+                  ${manage
                     ? `<button class="btn btn-light" onclick="openEdit('${t.id}')">Düzenle</button>
                        <button class="btn btn-danger" onclick="delTask('${t.id}')">Sil</button>`
                     : `<select onchange="setStatus('${t.id}', this.value)">${STATUSES.map(s=>`<option value="${s.id}" ${t.status===s.id?'selected':''}>${s.label}</option>`).join('')}</select>`}
@@ -98,6 +122,7 @@
       document.getElementById('editId').value = '';
       document.getElementById('dlgTitle').textContent = 'Yeni Görev';
       document.getElementById('tTitle').value = '';
+      document.getElementById('tDesc').value = '';
       document.getElementById('tDue').value = '';
       dlg.showModal();
     }
@@ -107,6 +132,7 @@
       document.getElementById('editId').value = tid;
       document.getElementById('dlgTitle').textContent = 'Görev Düzenle';
       document.getElementById('tTitle').value = t.title;
+      document.getElementById('tDesc').value = t.description || '';
       document.getElementById('tPriority').value = t.priority;
       document.getElementById('tStatus').value = t.status;
       document.getElementById('tDue').value = t.dueDate || '';
@@ -121,11 +147,12 @@
       const editId = document.getElementById('editId').value;
       const payload = {
         title,
+        description: document.getElementById('tDesc').value.trim(),
         priority: document.getElementById('tPriority').value,
         dueDate: document.getElementById('tDue').value || null,
         projectId: pid,
-        assigneeId: user.role === 'Admin' ? (document.getElementById('tAssign').value || null) : user.id,
-        status: user.role === 'Admin' ? document.getElementById('tStatus').value : 'ToDo',
+        assigneeId: manage ? (document.getElementById('tAssign').value || null) : user.id,
+        status: manage ? document.getElementById('tStatus').value : 'ToDo',
       };
       if (editId) {
         const i = tasks.findIndex(t => t.id === editId);
@@ -151,7 +178,32 @@
       if (t) { t.status = status; save(KEYS.tasks, tasks); render(); }
     }
 
+    function openComments(taskId, title) {
+      activeCommentTask = taskId;
+      document.getElementById('commentTitle').textContent = 'Yorumlar — ' + title;
+      document.getElementById('commentText').value = '';
+      renderComments();
+      commentDlg.showModal();
+    }
+
+    function renderComments() {
+      const list = commentsFor(activeCommentTask);
+      document.getElementById('commentList').innerHTML = list.length
+        ? list.map((c) => `<div class="comment-item"><strong>${userName(c.userId)}</strong><br>${c.text}<br><small>${fmtDate(c.createdAt)}</small></div>`).join('')
+        : '<p class="text-muted" style="font-size:14px">Henüz yorum yok.</p>';
+    }
+
+    function postComment() {
+      const text = document.getElementById('commentText').value;
+      if (!text.trim()) return toast('Yorum yaz', false);
+      addComment(activeCommentTask, user.id, text);
+      document.getElementById('commentText').value = '';
+      renderComments();
+      toast('Yorum eklendi', true);
+    }
+
     render();
+    if (new URLSearchParams(location.search).get('new') === '1' && manage) openNew();
   </script>
 </body>
 </html>

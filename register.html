@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TaskFlow - Kayıt</title>
+  <title>Görev Akışı - Kayıt</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -32,7 +32,8 @@
           document.getElementById('email').value,
           document.getElementById('password').value
         );
-        location.href = 'projects.html';
+        document.getElementById('msg').innerHTML = `<div class="msg ok">Hesabın hazır! Lider Paneli'nde ilk projeni oluşturabilirsin.</div>`;
+        setTimeout(() => { location.href = 'leader.html'; }, 1500);
       } catch (err) {
         document.getElementById('msg').innerHTML = `<div class="msg err">${err.message}</div>`;
       }
