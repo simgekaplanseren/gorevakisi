@@ -1,0 +1,40 @@
+╔══════════════════════════════════════════════════╗
+║         TASKFLOW - NASIL ACILIR? (KOLAY)         ║
+╚══════════════════════════════════════════════════╝
+
+BU BIR WEB SITESI - bilgisayarinda calisan bir site.
+Internetteki siteler gibi tarayicida (Chrome/Edge) acilir.
+
+──────────────────────────────────────────────────
+  TEK YAPMAN GEREKEN:
+──────────────────────────────────────────────────
+
+  >>>  BASLAT.bat  dosyasina CIFT TIKLA  <<<
+
+  10-15 saniye bekle, tarayici kendisi acilir.
+
+  Site adresi: http://localhost:5173
+
+──────────────────────────────────────────────────
+  GIRIS BILGILERI:
+──────────────────────────────────────────────────
+
+  Admin:     admin@taskflow.com  /  Admin123!
+  Kullanici: user@taskflow.com  /  User123!
+
+──────────────────────────────────────────────────
+  KAPATMAK ICIN:
+──────────────────────────────────────────────────
+
+  DURDUR.bat'a cift tikla
+  VEYA acilan 2 siyah pencereyi kapat.
+
+──────────────────────────────────────────────────
+  ILK ACILISTA:
+──────────────────────────────────────────────────
+
+  - Paketler otomatik yuklenir (1-2 dk surebilir)
+  - SQL Server kurulu olmali (yoksa giris yapamazsin)
+    Indir: https://aka.ms/ssmsfullsetup
+
+──────────────────────────────────────────────────
