@@ -11,26 +11,24 @@
   <div id="toast" hidden></div>
 
   <dialog id="projectDlg" style="border:0;border-radius:14px;padding:20px;max-width:420px;width:92%">
-    <h2 style="margin-bottom:12px">Yeni Proje — Sen Lider Ol</h2>
-    <p class="text-muted" style="margin-bottom:12px">Proje oluşturduğunda otomatik olarak lideri sen olursun.</p>
-    <div class="field"><label>Proje Adı</label><input id="pName" placeholder="Örn: Staj Projesi, Bitirme Ödevi"></div>
-    <div class="field"><label>Açıklama</label><textarea id="pDesc" rows="3" placeholder="Projenin amacı..."></textarea></div>
+    <h2 style="margin-bottom:12px">Yeni Proje</h2>
+    <div class="field"><label>Proje Adı</label><input id="pName"></div>
+    <div class="field"><label>Açıklama</label><textarea id="pDesc" rows="3"></textarea></div>
     <div class="actions">
       <button class="btn btn-light" onclick="projectDlg.close()">İptal</button>
-      <button class="btn btn-main" style="width:auto" onclick="addProject()">Proje Oluştur</button>
+      <button class="btn btn-main" style="width:auto" onclick="addProject()">Oluştur</button>
     </div>
   </dialog>
 
   <dialog id="userDlg" style="border:0;border-radius:14px;padding:20px;max-width:440px;width:92%">
-    <h2 style="margin-bottom:12px">Ekip Arkadaşı Hesabı Aç</h2>
-    <p class="text-muted" style="margin-bottom:12px">Arkadaşına e-posta ve şifre ver. Sonra projene ekle.</p>
+    <h2 style="margin-bottom:12px">Yeni Kullanıcı</h2>
     <div class="field"><label>Ad</label><input id="uName"></div>
     <div class="field"><label>Soyad</label><input id="uSurname"></div>
     <div class="field"><label>E-posta</label><input type="email" id="uEmail"></div>
-    <div class="field"><label>Şifre</label><input type="password" id="uPassword" placeholder="En az 6 karakter"></div>
+    <div class="field"><label>Şifre</label><input type="password" id="uPassword"></div>
     <div class="actions">
       <button class="btn btn-light" onclick="userDlg.close()">İptal</button>
-      <button class="btn btn-main" style="width:auto" onclick="addTeammate()">Hesap Oluştur</button>
+      <button class="btn btn-main" style="width:auto" onclick="addTeammate()">Kaydet</button>
     </div>
   </dialog>
 
@@ -43,70 +41,42 @@
     function render() {
       const led = projectsLedBy(user);
       const allUsers = load(KEYS.users).filter((u) => u.id !== user.id && u.role === 'User');
-      const hasTeammate = allUsers.length > 0;
-      const hasMember = led.some((p) => (p.members || []).length > 0);
       const ledTasks = load(KEYS.tasks).filter((t) => led.some((p) => p.id === t.projectId));
       const overdue = ledTasks.filter((t) => isOverdue(t));
 
-      const step = (done, num, text, action) => `
-        <div class="step ${done ? 'done' : ''}">
-          <span class="step-num">${done ? '✓' : num}</span>
-          <div>${text}${action || ''}</div>
-        </div>`;
-
       document.getElementById('app').innerHTML = shell('leader', `
-        <div class="leader-hero">
-          <h1>★ Lider Paneli</h1>
-          <p>Burada <strong>${user.name}</strong> olarak kendi projeni kurar, ekibini yönetir ve görev dağıtırsın.</p>
-        </div>
-
-        <div class="guide">
-          <h2>Lider olarak 4 adım</h2>
-          <div class="steps">
-            ${step(led.length > 0, 1, '<strong>Proje oluştur</strong> — sen otomatik lider olursun', led.length ? '' : '<br><button class="btn btn-main" style="width:auto;margin-top:8px" onclick="openProject()">+ İlk Projemi Oluştur</button>')}
-            ${step(hasTeammate, 2, '<strong>Ekip hesabı aç</strong> — arkadaşın için kullanıcı oluştur', hasTeammate ? '' : '<br><button class="btn btn-light" style="margin-top:8px" onclick="openUser()">+ Ekip Hesabı Aç</button>')}
-            ${step(hasMember, 3, '<strong>Projeye üye ekle</strong> — Proje Detayı → + Üye Ekle', led.length ? `<br><a href="project.html?id=${led[0].id}">Proje detayına git →</a>` : '')}
-            ${step(ledTasks.length > 0, 4, '<strong>Görev oluştur ve ata</strong>', led.length ? `<br><a href="tasks.html?p=${led[0].id}&new=1">Görev oluştur →</a>` : '')}
-          </div>
-        </div>
-
         <div class="row">
-          <h2 style="margin:0">Lider Olduğun Projeler (${led.length})</h2>
+          <h1 style="margin:0">Lider Paneli</h1>
           <div class="actions">
-            <button class="btn btn-light" onclick="openUser()">+ Ekip Hesabı</button>
-            <button class="btn btn-main" style="width:auto" onclick="openProject()">+ Yeni Proje</button>
+            <button class="btn btn-light" onclick="openUser()">+ Kullanıcı</button>
+            <button class="btn btn-main" style="width:auto" onclick="openProject()">+ Proje</button>
           </div>
         </div>
 
         ${overdue.length ? `
           <div class="today-box" style="border-color:#fecaca;background:#fff5f5;margin:16px 0">
-            <h2 style="color:#b91c1c;font-size:15px">⚠ Projelerinde geciken görev: ${overdue.length}</h2>
+            <h2 style="color:#b91c1c;font-size:15px">Geciken görev (${overdue.length})</h2>
             ${overdue.slice(0, 3).map((t) => {
               const p = led.find((x) => x.id === t.projectId);
               return `<div class="today-item"><span>${t.title} (${p?.name})</span><a href="tasks.html?p=${t.projectId}">Git →</a></div>`;
             }).join('')}
           </div>` : ''}
 
-        ${!led.length ? `
-          <div class="empty-state">
-            <h3>Henüz lider olduğun proje yok</h3>
-            <p>İlk projeni oluştur — staj, okul ödevi veya ekip çalışması için kullanabilirsin.</p>
-            <button class="btn btn-main" style="width:auto;margin-top:12px" onclick="openProject()">+ Proje Oluştur ve Lider Ol</button>
-          </div>` : `
-          <div class="grid" style="margin-top:16px">
+        <h2>Projelerim</h2>
+        ${!led.length ? '<p class="text-muted">Proje yok.</p>' : `
+          <div class="grid" style="margin-top:12px">
             ${led.map((p) => {
               const s = projectStats(p.id);
               const team = projectTeam(p);
               return `
-                <div class="box project leader-card">
-                  <span class="leader-badge">Sen Lidersin</span>
+                <div class="box project">
                   <h3>${p.name}</h3>
                   <p>${p.description || ''}</p>
-                  <small><strong>Ekip:</strong> ${team.length} kişi — ${team.map((u) => u.name).join(', ')}</small>
+                  <small>Ekip: ${team.map((u) => u.name).join(', ')}</small>
                   <div class="bar"><i style="width:${s.percent}%"></i></div>
                   <small>${s.done}/${s.total} görev · %${s.percent}</small>
                   <div class="actions">
-                    <a class="btn btn-main" style="width:auto" href="project.html?id=${p.id}">Ekip Yönet</a>
+                    <a class="btn btn-main" style="width:auto" href="project.html?id=${p.id}">Detay</a>
                     <a class="btn btn-light" href="tasks.html?p=${p.id}&new=1">+ Görev</a>
                     <a class="btn btn-light" href="kanban.html?p=${p.id}">Kanban</a>
                   </div>
@@ -114,24 +84,22 @@
             }).join('')}
           </div>`}
 
-        <h2 style="margin-top:28px">Kayıtlı Ekip Üyeleri</h2>
-        <p class="text-muted" style="margin-bottom:12px">Bu kişileri projenin detay sayfasından ekleyebilirsin.</p>
+        <h2 style="margin-top:28px">Kullanıcılar</h2>
         ${allUsers.length ? `
           <table>
             <thead><tr><th>Ad Soyad</th><th>E-posta</th><th>Projeler</th><th></th></tr></thead>
             <tbody>
               ${allUsers.map((u) => {
-                const ps = projectsForUserId(u.id).map((p) => p.name).join(', ') || 'Henüz eklenmedi';
+                const ps = projectsForUserId(u.id).map((p) => p.name).join(', ') || '—';
                 return `<tr>
                   <td>${u.name} ${u.surname}</td>
                   <td>${u.email}</td>
                   <td>${ps}</td>
-                  <td>${led.length ? `<a href="project.html?id=${led[0].id}">Projeye ekle →</a>` : '—'}</td>
+                  <td>${led.length ? `<a href="project.html?id=${led[0].id}">Ekle</a>` : '—'}</td>
                 </tr>`;
               }).join('')}
             </tbody>
-          </table>` : `
-          <div class="empty-hint">Henüz ekip hesabı yok. <button class="btn btn-light" onclick="openUser()">+ Ekip Hesabı Aç</button></div>`}
+          </table>` : '<p class="text-muted">Kullanıcı yok.</p>'}
       `);
     }
 
@@ -156,7 +124,6 @@
       });
       save(KEYS.projects, projects);
       projectDlg.close();
-      toast('Tebrikler! Artık bu projenin liderisin.', true);
       location.href = `project.html?id=${newId}`;
     }
 
@@ -178,7 +145,7 @@
         );
         userDlg.close();
         render();
-        toast('Ekip hesabı oluşturuldu — şimdi projene ekle', true);
+        toast('Kullanıcı eklendi', true);
       } catch (err) {
         toast(err.message, false);
       }

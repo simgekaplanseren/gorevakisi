@@ -12,8 +12,8 @@
 
   <dialog id="dlg" style="border:0;border-radius:14px;padding:20px;max-width:420px;width:92%">
     <h2 style="margin-bottom:12px">Yeni Proje</h2>
-    <div class="field"><label>Proje Adı</label><input id="pName" placeholder="Örn: Staj Projesi, Final Ödevi"></div>
-    <div class="field"><label>Açıklama</label><textarea id="pDesc" rows="3" placeholder="Projenin kısa açıklaması..."></textarea></div>
+    <div class="field"><label>Proje Adı</label><input id="pName"></div>
+    <div class="field"><label>Açıklama</label><textarea id="pDesc" rows="3"></textarea></div>
     <div class="actions">
       <button class="btn btn-light" onclick="dlg.close()">İptal</button>
       <button class="btn btn-main" style="width:auto" onclick="addProject()">Oluştur</button>
@@ -28,7 +28,7 @@
 
     function todayTasksHtml() {
       const mine = tasksFor(user).filter((t) => isDueToday(t) || isOverdue(t));
-      if (!mine.length) return '<p class="text-muted" style="font-size:14px">Bugün için acil görev yok.</p>';
+      if (!mine.length) return '<p class="text-muted" style="font-size:14px">Görev yok.</p>';
       return mine.map((t) => {
         const p = load(KEYS.projects).find((x) => x.id === t.projectId);
         return `<div class="today-item">
@@ -38,57 +38,6 @@
       }).join('');
     }
 
-    function adminGuide() {
-      const users = load(KEYS.users).filter((u) => u.role === 'User');
-      const projects = load(KEYS.projects);
-      const hasMember = projects.some((p) => (p.members || []).length > 0);
-      const hasTask = load(KEYS.tasks).length > 0;
-
-      const step = (done, num, text, link, label) => `
-        <div class="step ${done ? 'done' : ''}">
-          <span class="step-num">${done ? '✓' : num}</span>
-          <div>
-            <strong>${text}</strong>
-            ${link ? `<br><a href="${link}">${label} →</a>` : ''}
-          </div>
-        </div>`;
-
-      return `<div class="guide">
-        <h2>Proje lideri olarak başlangıç (4 adım)</h2>
-        <div class="steps">
-          ${step(users.length > 1, 1, 'Ekip arkadaşlarının hesabını oluştur', 'users.html', 'Kullanıcılar sayfasına git')}
-          ${step(projects.length > 0, 2, 'Yeni proje aç', '#', 'Aşağıdaki + Proje butonuna tıkla')}
-          ${step(hasMember, 3, 'Projeye ekip üyesi ekle', projects.length ? `project.html?id=${projects[0].id}` : 'projects.html', 'Proje detayına git')}
-          ${step(hasTask, 4, 'Görev oluştur ve kişiye ata', projects.length ? `tasks.html?p=${projects[0].id}` : 'projects.html', 'Görevlere git')}
-        </div>
-      </div>`;
-    }
-
-    function userGuide() {
-      const myProjects = projectsFor(user);
-      const iLead = projectsLedBy(user).length > 0;
-      if (!myProjects.length) {
-        return `<div class="guide warn">
-          <h2>Henüz bir projede değilsin</h2>
-          <p><a href="leader.html"><strong>Lider Paneli</strong></a>'ne git ve kendi projeni oluştur — ya da bir lider seni ekleyene kadar bekle.</p>
-        </div>`;
-      }
-      if (iLead) {
-        return `<div class="guide">
-          <h2>Hem lider hem üyesin</h2>
-          <p>Lider olduğun projeleri <a href="leader.html">Lider Paneli</a>'nde yönet. Üye olduğun projeler aşağıda.</p>
-        </div>`;
-      }
-      return `<div class="guide">
-        <h2>Ekip üyesi olarak ne yaparsın?</h2>
-        <ol>
-          <li><strong>Görevlerim</strong> sayfasından sana atanan tüm görevleri gör</li>
-          <li>Projeye gir → görev durumunu güncelle veya Kanban'da sürükle</li>
-          <li>Göreve yorum yaz (soru / not bırak)</li>
-        </ol>
-      </div>`;
-    }
-
     function render() {
       const q = (document.getElementById('search')?.value || '').toLowerCase();
       const list = projectsFor(user).filter((p) =>
@@ -96,23 +45,18 @@
       );
 
       document.getElementById('app').innerHTML = shell('projects', `
-        ${isAdmin ? adminGuide() : userGuide()}
         <div class="today-box">
-          <h2>Bugünkü Görevlerim</h2>
+          <h2>Bugünkü Görevler</h2>
           ${todayTasksHtml()}
         </div>
         <div class="row">
           <h1 style="margin:0">Projeler</h1>
           <div class="filters">
-            <input id="search" placeholder="Proje ara..." value="${q.replace(/"/g, '&quot;')}" oninput="render()">
+            <input id="search" placeholder="Ara..." value="${q.replace(/"/g, '&quot;')}" oninput="render()">
             ${isAdmin ? '<button class="btn btn-main" style="width:auto" onclick="openNew()">+ Proje</button>' : ''}
           </div>
         </div>
-        ${!list.length ? `
-          <div class="empty-state">
-            <h3>${isAdmin ? 'Henüz proje yok' : 'Görüntülenecek proje yok'}</h3>
-            <p>${isAdmin ? '+ Proje butonuyla ilk projeni oluştur.' : 'Proje liderin seni eklediğinde burada görünecek.'}</p>
-          </div>` : `
+        ${!list.length ? '<p class="text-muted">Proje bulunamadı.</p>' : `
         <div class="grid">
           ${list.map((p) => {
             const s = projectStats(p.id);
@@ -122,12 +66,11 @@
               <div class="box project">
                 <h3>${p.name}</h3>
                 <p>${p.description || ''}</p>
-                <small><strong>Lider:</strong> ${owner}</small><br>
-                <small><strong>Ekip:</strong> ${team.map((u) => `${u.name}`).join(', ')}</small>
+                <small>Lider: ${owner} · Ekip: ${team.map((u) => u.name).join(', ')}</small>
                 <div class="bar"><i style="width:${s.percent}%"></i></div>
                 <small>${s.done}/${s.total} görev · %${s.percent}</small>
                 <div class="actions">
-                  <a class="btn btn-main" style="width:auto" href="project.html?id=${p.id}">Proje Detayı</a>
+                  <a class="btn btn-main" style="width:auto" href="project.html?id=${p.id}">Detay</a>
                   <a class="btn btn-light" href="tasks.html?p=${p.id}">Görevler</a>
                   <a class="btn btn-light" href="kanban.html?p=${p.id}">Kanban</a>
                   ${canManageProject(user, p) ? `<button class="btn btn-danger" onclick="delProject('${p.id}')">Sil</button>` : ''}
@@ -159,12 +102,11 @@
       });
       save(KEYS.projects, projects);
       dlg.close();
-      toast('Proje oluşturuldu — şimdi ekip ekle', true);
       location.href = `project.html?id=${newId}`;
     }
 
     function delProject(pid) {
-      if (!confirm('Proje ve tüm görevleri silinsin mi?')) return;
+      if (!confirm('Proje silinsin mi?')) return;
       save(KEYS.projects, load(KEYS.projects).filter((p) => p.id !== pid));
       save(KEYS.tasks, load(KEYS.tasks).filter((t) => t.projectId !== pid));
       render();

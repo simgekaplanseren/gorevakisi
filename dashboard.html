@@ -20,9 +20,9 @@
     const teamUsers = users.filter((u) => u.role === 'User');
 
     const stats = [
-      ['Ekip Üyesi', teamUsers.length],
-      ['Toplam Proje', projects.length],
-      ['Toplam Görev', tasks.length],
+      ['Kullanıcı', teamUsers.length],
+      ['Proje', projects.length],
+      ['Görev', tasks.length],
       ['Tamamlanan', tasks.filter((t) => t.status === 'Completed').length],
       ['Geciken', tasks.filter((t) => isOverdue(t)).length],
       ['Bugün Teslim', tasks.filter((t) => isDueToday(t)).length],
@@ -33,46 +33,20 @@
     const overdue = tasks.filter((t) => isOverdue(t));
     const dueToday = tasks.filter((t) => isDueToday(t));
 
-    const hasMember = projects.some((p) => (p.members || []).length > 0);
-
     document.getElementById('app').innerHTML = shell('dashboard', `
-      <h1>Dashboard — Proje Lideri Paneli</h1>
-      <p class="text-muted" style="margin-bottom:18px">Sen Admin'sin: ekip hesaplarını, projeleri ve görevleri buradan yönetirsin.</p>
-
-      <div class="guide">
-        <h2>Hızlı başlangıç</h2>
-        <div class="steps">
-          <div class="step ${teamUsers.length ? 'done' : ''}">
-            <span class="step-num">${teamUsers.length ? '✓' : '1'}</span>
-            <div><strong>Ekip hesapları</strong><br><a href="users.html">Kullanıcılar → hesap oluştur</a></div>
-          </div>
-          <div class="step ${projects.length ? 'done' : ''}">
-            <span class="step-num">${projects.length ? '✓' : '2'}</span>
-            <div><strong>Proje aç</strong><br><a href="projects.html">Projeler → + Proje</a></div>
-          </div>
-          <div class="step ${hasMember ? 'done' : ''}">
-            <span class="step-num">${hasMember ? '✓' : '3'}</span>
-            <div><strong>Ekibe üye ekle</strong><br><a href="projects.html">Proje Detayı → + Üye Ekle</a></div>
-          </div>
-          <div class="step ${tasks.length ? 'done' : ''}">
-            <span class="step-num">${tasks.length ? '✓' : '4'}</span>
-            <div><strong>Görev ata</strong><br><a href="projects.html">Görevler → + Görev</a></div>
-          </div>
-        </div>
-      </div>
-
+      <h1>Dashboard</h1>
       <div class="grid-stats">${stats.map(([l, v]) => `<div class="box"><h3>${l}</h3><strong>${v}</strong></div>`).join('')}</div>
 
       ${overdue.length ? `
         <div class="today-box" style="border-color:#fecaca;background:#fff5f5">
-          <h2 style="color:#b91c1c">⚠ Geciken Görevler (${overdue.length})</h2>
-          ${overdue.map((t) => `<div class="today-item"><span>${t.title} — ${pmap[t.projectId]} · ${userName(t.assigneeId)}</span><a href="tasks.html?p=${t.projectId}">Git →</a></div>`).join('')}
+          <h2 style="color:#b91c1c">Geciken (${overdue.length})</h2>
+          ${overdue.map((t) => `<div class="today-item"><span>${t.title} — ${pmap[t.projectId]}</span><a href="tasks.html?p=${t.projectId}">Git →</a></div>`).join('')}
         </div>` : ''}
 
       ${dueToday.length ? `
         <div class="today-box">
-          <h2>📅 Bugün Teslim (${dueToday.length})</h2>
-          ${dueToday.map((t) => `<div class="today-item"><span>${t.title} — ${pmap[t.projectId]} · ${userName(t.assigneeId)}</span><a href="tasks.html?p=${t.projectId}">Git →</a></div>`).join('')}
+          <h2>Bugün Teslim (${dueToday.length})</h2>
+          ${dueToday.map((t) => `<div class="today-item"><span>${t.title} — ${pmap[t.projectId]}</span><a href="tasks.html?p=${t.projectId}">Git →</a></div>`).join('')}
         </div>` : ''}
 
       <h2>Projeler</h2>
@@ -85,13 +59,13 @@
               return `<tr>
                 <td><strong>${p.name}</strong></td>
                 <td>${userName(p.ownerId)}</td>
-                <td>${projectTeam(p).length} kişi</td>
+                <td>${projectTeam(p).length}</td>
                 <td>${s.done}/${s.total} (%${s.percent})</td>
-                <td><a href="project.html?id=${p.id}">Yönet →</a></td>
+                <td><a href="project.html?id=${p.id}">Detay</a></td>
               </tr>`;
             }).join('')}
           </tbody>
-        </table>` : '<p class="text-muted" style="margin-bottom:24px">Henüz proje yok. <a href="projects.html">Proje oluştur</a></p>'}
+        </table>` : '<p class="text-muted">Proje yok.</p>'}
 
       <h2>Son Görevler</h2>
       <table>

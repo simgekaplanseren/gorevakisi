@@ -11,12 +11,11 @@
   <div id="toast" hidden></div>
 
   <dialog id="dlg" style="border:0;border-radius:14px;padding:20px;max-width:440px;width:92%">
-    <h2 style="margin-bottom:12px">Yeni Ekip Üyesi</h2>
-    <p class="text-muted" style="margin-bottom:12px">Arkadaşının e-posta ve şifresini gir. Sonra projeye ekleyebilirsin.</p>
+    <h2 style="margin-bottom:12px">Yeni Kullanıcı</h2>
     <div class="field"><label>Ad</label><input id="name"></div>
     <div class="field"><label>Soyad</label><input id="surname"></div>
-    <div class="field"><label>E-posta</label><input type="email" id="email" placeholder="ornek@mail.com"></div>
-    <div class="field"><label>Şifre</label><input type="password" id="password" placeholder="En az 6 karakter"></div>
+    <div class="field"><label>E-posta</label><input type="email" id="email"></div>
+    <div class="field"><label>Şifre</label><input type="password" id="password"></div>
     <div class="actions">
       <button class="btn btn-light" onclick="dlg.close()">İptal</button>
       <button class="btn btn-main" style="width:auto" onclick="addUser()">Kaydet</button>
@@ -37,34 +36,19 @@
       const users = load(KEYS.users);
       document.getElementById('app').innerHTML = shell('users', `
         <div class="row">
-          <h1 style="margin:0">Ekip — Kullanıcılar</h1>
-          <button class="btn btn-main" style="width:auto" onclick="dlg.showModal()">+ Kullanıcı Oluştur</button>
+          <h1 style="margin:0">Kullanıcılar</h1>
+          <button class="btn btn-main" style="width:auto" onclick="dlg.showModal()">+ Kullanıcı</button>
         </div>
-
-        <div class="guide">
-          <h2>Kim ne yapar?</h2>
-          <ul class="role-list">
-            <li><span class="tag b-review">Admin (Sen)</span> Proje açar, ekip hesabı oluşturur, görev atar, her şeyi görür.</li>
-            <li><span class="tag b-med">Ekip Üyesi</span> Sadece kendine atanan görevleri görür, durumu günceller, yorum yazar.</li>
-          </ul>
-          <p style="margin-top:10px;font-size:14px;color:#475569">
-            <strong>Adım 1:</strong> Buradan ekip arkadaşının hesabını oluştur →
-            <strong>Adım 2:</strong> <a href="projects.html">Projeler</a> → Proje Detayı → + Üye Ekle
-          </p>
-        </div>
-
         <table>
           <thead><tr><th>Ad Soyad</th><th>E-posta</th><th>Rol</th><th>Projeler</th><th></th></tr></thead>
           <tbody>
             ${users.map((u) => `
               <tr>
-                <td><strong>${u.name} ${u.surname}</strong></td>
+                <td>${u.name} ${u.surname}</td>
                 <td>${u.email}</td>
-                <td><span class="tag ${u.role === 'Admin' ? 'b-review' : 'b-med'}">${u.role === 'Admin' ? 'Proje Lideri' : 'Ekip Üyesi'}</span></td>
+                <td><span class="tag ${u.role === 'Admin' ? 'b-review' : 'b-med'}">${u.role === 'Admin' ? 'Admin' : 'Kullanıcı'}</span></td>
                 <td>${userProjectsLabel(u.id)}</td>
-                <td>
-                  ${u.id !== user.id ? `<button class="btn btn-danger" onclick="removeUser('${u.id}')">Sil</button>` : '—'}
-                </td>
+                <td>${u.id !== user.id ? `<button class="btn btn-danger" onclick="removeUser('${u.id}')">Sil</button>` : '—'}</td>
               </tr>`).join('')}
           </tbody>
         </table>
@@ -85,11 +69,11 @@
       save(KEYS.users, users);
       dlg.close();
       render();
-      toast('Kullanıcı oluşturuldu — şimdi projeye ekle', true);
+      toast('Kullanıcı eklendi', true);
     }
 
     function removeUser(uid) {
-      if (!confirm('Kullanıcı silinsin mi? Projelerden de çıkarılır.')) return;
+      if (!confirm('Kullanıcı silinsin mi?')) return;
       save(KEYS.users, load(KEYS.users).filter((u) => u.id !== uid));
       const projects = load(KEYS.projects).map((p) => ({
         ...p,

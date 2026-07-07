@@ -29,31 +29,10 @@ const save = (key, data) => localStorage.setItem(key, JSON.stringify(data));
 
 function seed() {
   if (localStorage.getItem('tf_ready')) return;
-
-  const adminId = id();
-  const userId = id();
-  const projectId = id();
-
-  save(KEYS.users, [
-    { id: adminId, name: 'Admin', surname: 'User', email: 'admin@taskflow.com', password: 'Admin123!', role: 'Admin' },
-    { id: userId, name: 'Demo', surname: 'Kullanıcı', email: 'user@taskflow.com', password: 'User123!', role: 'User' },
-  ]);
-
-  save(KEYS.projects, [{
-    id: projectId,
-    name: 'Görev Akışı Demo',
-    description: 'Örnek proje — görevlerini buradan yönet.',
-    ownerId: adminId,
-    members: [userId],
-    updatedAt: new Date().toISOString(),
-  }]);
-
-  save(KEYS.tasks, [
-    { id: id(), projectId, title: 'Tasarımı tamamla', description: 'Ana sayfa ve renk teması', priority: 'Medium', status: 'Completed', assigneeId: adminId, dueDate: '2026-07-01', createdAt: new Date().toISOString() },
-    { id: id(), projectId, title: 'Görev listesi sayfası', description: 'Filtre ve yorum özelliği ekle', priority: 'High', status: 'InProgress', assigneeId: userId, dueDate: '2026-07-15', createdAt: new Date().toISOString() },
-    { id: id(), projectId, title: 'Haftalık rapor', description: 'Staj ilerleme özeti hazırla', priority: 'High', status: 'InProgress', assigneeId: userId, dueDate: '2026-07-05', createdAt: new Date().toISOString() },
-  ]);
-
+  save(KEYS.users, []);
+  save(KEYS.projects, []);
+  save(KEYS.tasks, []);
+  save(KEYS.comments, []);
   localStorage.setItem('tf_ready', '1');
 }
 
@@ -141,11 +120,11 @@ function projectsForUserId(userId) {
 
 function roleLabel(userOrRole) {
   if (typeof userOrRole === 'object') {
-    if (userOrRole.role === 'Admin') return 'Sistem Yöneticisi';
-    if (projectsLedBy(userOrRole).length) return 'Proje Lideri';
-    return 'Ekip Üyesi';
+    if (userOrRole.role === 'Admin') return 'Admin';
+    if (projectsLedBy(userOrRole).length) return 'Lider';
+    return 'Üye';
   }
-  return userOrRole === 'Admin' ? 'Sistem Yöneticisi' : 'Ekip Üyesi';
+  return userOrRole === 'Admin' ? 'Admin' : 'Üye';
 }
 
 function createTeamUser(name, surname, email, password) {
@@ -261,7 +240,7 @@ function shell(active, body) {
        <a href="users.html" class="${active === 'users' ? 'on' : ''}">Kullanıcılar</a>`
     : '';
 
-  const leaderLink = `<a href="leader.html" class="${active === 'leader' ? 'on' : ''}">★ Lider Paneli</a>`;
+  const leaderLink = `<a href="leader.html" class="${active === 'leader' ? 'on' : ''}">Lider Paneli</a>`;
 
   const notes = notificationsFor(user);
   const noteHtml = notes.length

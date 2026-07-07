@@ -24,17 +24,9 @@
 
       const open = list.filter(t => t.status !== 'Completed').length;
       const done = list.filter(t => t.status === 'Completed').length;
-      const myProjects = projectsFor(user);
-
-      const emptyHint = !myProjects.length ? `
-        <div class="guide warn">
-          <h2>Henüz görevin yok</h2>
-          <p><a href="leader.html">Lider Paneli</a>'nde proje oluşturup görev atayabilir — veya bir lider seni ekleyene kadar bekleyebilirsin.</p>
-        </div>` : '';
 
       document.getElementById('app').innerHTML = shell('mytasks', `
         <h1>Görevlerim</h1>
-        ${emptyHint}
         <div class="grid-stats" style="margin-bottom:20px">
           <div class="box"><h3>Açık Görev</h3><strong>${open}</strong></div>
           <div class="box"><h3>Tamamlanan</h3><strong>${done}</strong></div>

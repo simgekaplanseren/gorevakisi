@@ -32,8 +32,7 @@
           document.getElementById('email').value,
           document.getElementById('password').value
         );
-        document.getElementById('msg').innerHTML = `<div class="msg ok">Hesabın hazır! Lider Paneli'nde ilk projeni oluşturabilirsin.</div>`;
-        setTimeout(() => { location.href = 'leader.html'; }, 1500);
+        location.href = 'leader.html';
       } catch (err) {
         document.getElementById('msg').innerHTML = `<div class="msg err">${err.message}</div>`;
       }
